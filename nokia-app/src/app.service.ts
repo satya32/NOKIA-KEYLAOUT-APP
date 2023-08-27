@@ -1,10 +1,10 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { Observable, of, switchMap } from 'rxjs';
+import { Observable, concatMap, forkJoin, from, map, of, reduce, switchMap } from 'rxjs';
 import { HEADER_REQUEST } from './constants/sender-constanta';
 import { ResponseCommunication } from './constants/type-constants';
 // import { SENDER } from './constants/sender-constanta';
 
-const nokiaKeypadLayout = {
+const nokiaKeypadLayout : Record<string, string>={
       a: "2", b: "22", c: "222",
       d: "3", e: "33", f: "333",
       g: "4", h: "44", i: "444",
@@ -72,22 +72,33 @@ This Function : messageToMoon : used to convert string to ,
     this.logger.log('Inside : convertToNokiaLayout :');
 
     console.log('message :' , message);
-     const responseMessage:string = this.convertToNokiaLayout(message);
-    console.log(' responseMessage :' , responseMessage);
+     return this.convertToNokiaLayout(message).pipe(
+      map((responseData:string)=>{
+        console.log(" responseData :" , responseData);
 
-    return of(responseMessage);
+        return responseData
+      })
+     )
+   
   }
 
  /*
 Helper function : convertToNokiaLayout : string to number;
 */ 
- convertToNokiaLayout(inputString:string):string{
+ convertToNokiaLayout(inputString:string):Observable<string>{
   this.logger.log('Inside : convertToNokiaLayout :');
-    return inputString
-    .toLowerCase()
-    .split('')
-    .map(char => nokiaKeypadLayout[char] || char)
-    .join('');
+
+
+  return of(inputString).pipe(
+    map(input => input.toLowerCase().split('')),
+    map(chars => chars.map(char => nokiaKeypadLayout[char] || char)),
+    map(mappedChars => mappedChars.join(''))
+);
+    // return inputString
+    // .toLowerCase()
+    // .split('')
+    // .map(char => nokiaKeypadLayout[char] || char)
+    // .join('');
       
   }
   /* 
@@ -103,48 +114,66 @@ This Function : messageToEarth : used to convert number to ,
     console.log('words :' , words);
     let  responseData : string = '';
     
-    for(const data of words){
+    return from(words).pipe(
+      concatMap(data =>
+          this.findRepeatedNumberCombinations(data).pipe(
+              concatMap(combinationNumber =>
+                  this.combinationOfString(combinationNumber)
+              )
+          )
+      ),
+      reduce((responseData, messageString) => responseData + messageString, '')
+  );
 
-      const combinationNumber:string[] = this.findRepeatedNumberCombinations(data);
+    // for(const data of words){
 
-     console.log(' combinationNumber :' , combinationNumber);
-     responseData += this.combinationOfString(combinationNumber);
+    //   const combinationNumber:string[] = this.findRepeatedNumberCombinations(data);
 
-    console.log(' messageString : ' ,responseData);
-    //  responseData += messageString;
-    }
-    console.log('message-string : ' , responseData);
+    //  console.log(' combinationNumber :' , combinationNumber);
+    //  responseData += this.combinationOfString(combinationNumber);
 
-    return of(responseData);
+    // console.log(' messageString : ' ,responseData);
+    // //  responseData += messageString;
+    // }
+    // console.log('message-string : ' , responseData);
+
+    // return of(responseData);
   }
 
 /*
 Helper function to combine string;
 */ 
- combinationOfString(input:string[]):string
+ combinationOfString(input:string[]):Observable<string>
  {
   this.logger.log('Inside : combinationOfString :');
   let responseString :string = '';
 
-  for(const value  of input ){
-    responseString += this.fetchKeyFromObject(value);
 
-  }
+  return from(input).pipe(
+    concatMap(value => 
+      this.fetchKeyFromObject(value)
+      
+      ),
+      reduce((responseData, messageString) => responseData + messageString, '')
+  )
+  // for(const value  of input ){
+  //   responseString += this.fetchKeyFromObject(value);
 
-  return responseString;
+  // }
+
+  // return of(responseString);
  }
 
 /*
 Helper function : fetchKeyFromObject : fetching each key :;
 */ 
 
- fetchKeyFromObject(value:string):String{
+ fetchKeyFromObject(value:string):Observable<string>{
   this.logger.debug('Inside : fetchKeyFromObject :');
 
-  
   for(const key in nokiaKeypadLayout){
     if(nokiaKeypadLayout[key] === value){
-      return key;
+      return of(key);
     }
   }
 
@@ -153,7 +182,7 @@ Helper function : fetchKeyFromObject : fetching each key :;
   /*
 Helper function : findRepeatedNumberCombinations : Find the combination of repeated number.
 */ 
- findRepeatedNumberCombinations(inputString:string):string[] {
+ findRepeatedNumberCombinations(inputString:string):Observable<string[]> {
         const repeatedCombinations :string[] = [];
 
         console.log(' string : ' , inputString);
@@ -161,10 +190,12 @@ Helper function : findRepeatedNumberCombinations : Find the combination of repea
       
         while (i < inputString.length) {
           let j = i + 1;
-      
-          while (j < inputString.length && inputString[j] === inputString[i] ) {
+         let count = 0;
+          while (j < inputString.length && inputString[j] === inputString[i]) {
+          //  count++;
             j++;
           }
+          // j = count;
            const substringLength = inputString.substring(i, j).length;
            
            console.log('substringLength :' , substringLength);
@@ -176,7 +207,7 @@ Helper function : findRepeatedNumberCombinations : Find the combination of repea
           i = j;
         }
       
-        return repeatedCombinations;
+        return of (repeatedCombinations);
       }
 
 
