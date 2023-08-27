@@ -1,11 +1,8 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
-import { type } from 'os';
-import { off } from 'process';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common'
 import { Observable, of } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 import { HEADER_REQUEST } from 'src/constants/sender-constanta';
 import { ResponseCommunication } from 'src/constants/type-constants';
-
 
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
@@ -20,20 +17,30 @@ export class ResponseInterceptor implements NestInterceptor {
 
     const receiver = request['receiver'];
     console.log('receiver :' , receiver);
-        
+      
+
     return next.handle().pipe(
       map(response => {
-       console.log(' responseMessage In side Interceptor :' ,response)
+       console.log(' responseMessage In side Interceptor :' ,response);
+
+    const entryTime = new Date().toISOString();
+    console.debug(' exit-time :'  , entryTime);
 
        if(response && sender === HEADER_REQUEST.EARTH){
 
-        console.log('Inside : middleware : if block ')
+        console.log('Inside : middleware : if block ');
           return response;
        }else if(response && sender === HEADER_REQUEST.MOON){
         return response;
        }
        
       }),
+      catchError((error : Error)=>{
+        console.log('inside catch-error : ' , error);
+        return of(error);
+
+      })
     );
+   
   }
 }

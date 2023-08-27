@@ -152,7 +152,6 @@ Helper function to combine string;
   return from(input).pipe(
     concatMap(value => 
       this.fetchKeyFromObject(value)
-      
       ),
       reduce((responseData, messageString) => responseData + messageString, '')
   )
@@ -176,7 +175,7 @@ Helper function : fetchKeyFromObject : fetching each key :;
       return of(key);
     }
   }
-
+return of('')
  }
 
   /*
@@ -190,11 +189,13 @@ Helper function : findRepeatedNumberCombinations : Find the combination of repea
       
         while (i < inputString.length) {
           let j = i + 1;
-         let count = 0;
-          while (j < inputString.length && inputString[j] === inputString[i]) {
-          //  count++;
+         let count = 1;
+          while (j < inputString.length && inputString[j] === inputString[i] && count<3) {
+           count++;
             j++;
           }
+
+          console.log('count : ' , count);
           // j = count;
            const substringLength = inputString.substring(i, j).length;
            
@@ -207,6 +208,7 @@ Helper function : findRepeatedNumberCombinations : Find the combination of repea
           i = j;
         }
       
+        console.log(' repeatedCombinations :' ,repeatedCombinations);
         return of (repeatedCombinations);
       }
 
